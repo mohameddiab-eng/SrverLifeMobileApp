@@ -67,7 +67,7 @@ body {
     color: var(--text-color);
     transition: background-color 0.3s, color 0.3s;
     position: relative;
-    overflow-x: hidden;
+    overflow: auto hidden;
 }
 
 /* Animated Background Overlay for Home Theme */
