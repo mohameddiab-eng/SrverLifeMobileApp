@@ -15,6 +15,8 @@ let volumeIncreaseInterval = null;
 let volumeDecreaseInterval = null;
 let activeMedicineAlarmId = null; // To track which medicine alarm is currently ringing
 let medicineAlarmAudio = null; // Still needed for the audio element itself
+let audioContext = null;
+let currentAlarmSource = null;
 
 function getMedicineAlarmAudioEl() {
     return document.getElementById('medicine-alarm-audio') || medicineAlarmAudio;
@@ -1187,9 +1189,9 @@ function checkAllMedicineAlarms() {
         const timeUntilAlarm = alarmDate.getTime() - now.getTime();
         const secondsUntilAlarm = Math.floor(timeUntilAlarm / 1000);
 
-        // Trigger alarm when current time is at or just past the alarm time (within 1 second window)
-        // This ensures it triggers on all pages
-        if (now >= alarmDate && now < new Date(alarmDate.getTime() + 1000) && !item.alarmTriggered) {
+        // Trigger alarm when the countdown reaches 0 or has passed
+        // This ensures it triggers reliably even if the check is slightly delayed
+        if (timeUntilAlarm <= 0 && !item.alarmTriggered) {
             triggerMedicineAlarm(item.id, item.name);
             item.alarmTriggered = true; // Mark as triggered to prevent multiple triggers
             saveToLocal(false); // Save state without re-rendering to avoid disrupting countdowns
@@ -1238,10 +1240,7 @@ window.triggerMedicineAlarm = function(id, name) {
 
         // Add click handler to play audio on user interaction (for mobile autoplay restrictions)
         const playAudioOnClick = () => {
-            const audioEl = getMedicineAlarmAudioEl();
-            if (audioEl && audioEl.paused) {
-                audioEl.play().catch(e => console.error("Error playing medicine alarm on click: ", e));
-            }
+            playAlarmSound();
             alarmScreen.removeEventListener('click', playAudioOnClick);
         };
         alarmScreen.addEventListener('click', playAudioOnClick);
@@ -1252,21 +1251,8 @@ window.triggerMedicineAlarm = function(id, name) {
 
     activeMedicineAlarmId = id; // Set the active alarm ID
 
-    // Play alarm sound - works on all pages
-    const audioEl = getMedicineAlarmAudioEl();
-    if (audioEl) {
-        medicineAlarmAudio = audioEl;
-        audioEl.currentTime = 0;
-        audioEl.volume = 0.7;
-        // Try to play immediately, but also set up fallback for mobile
-        const playPromise = audioEl.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(e => {
-                console.warn("Autoplay blocked, audio will play on user interaction: ", e);
-                // Audio will be played when user clicks the alarm screen
-            });
-        }
-    }
+    // Try to play alarm sound immediately - this should work now that screen is shown
+    playAlarmSound();
 
     // Also show browser notification if supported
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -1276,7 +1262,44 @@ window.triggerMedicineAlarm = function(id, name) {
             tag: 'medicine-alarm'
         });
     }
+
+    // Force a vibration if supported (for mobile devices)
+    if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200, 100, 200]);
+    }
 };
+
+// Function to play alarm sound using Web Audio API to bypass autoplay restrictions
+function playAlarmSound() {
+    const audioEl = getMedicineAlarmAudioEl();
+    if (audioEl) {
+        medicineAlarmAudio = audioEl;
+        audioEl.currentTime = 0;
+        audioEl.volume = 0.7;
+        audioEl.loop = true; // Make sure it loops
+
+        // Try to play with Web Audio API to bypass restrictions
+        if (!audioContext) {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.warn("Web Audio API not supported");
+            }
+        }
+
+        if (audioContext && audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+                audioEl.play().catch(e => {
+                    console.warn("Audio play failed even after resume: ", e);
+                });
+            });
+        } else {
+            audioEl.play().catch(e => {
+                console.warn("Autoplay blocked, audio will play on user interaction: ", e);
+            });
+        }
+    }
+}
 
 // Test function to simulate alarm (for testing purposes)
 window.testMedicineAlarm = function() {
