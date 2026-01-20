@@ -1137,7 +1137,7 @@ function renderMeds() {
         let alarmDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), alarmHours, alarmMinutes, 0);
         
         // If the alarm time has passed for today, set it for tomorrow
-        if (alarmDate < now && !item.alarmTriggered) {
+        if (alarmDate <= now) {
             alarmDate.setDate(alarmDate.getDate() + 1);
         }
 
@@ -1178,25 +1178,26 @@ function checkAllMedicineAlarms() {
         if (!item.time) return; // No alarm time set for this medication
 
         const [alarmHours, alarmMinutes] = item.time.split(':').map(Number);
-        let alarmDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), alarmHours, alarmMinutes, 0);
+        // Calculate today's alarm time for triggering
+        const todayAlarm = new Date(now.getFullYear(), now.getMonth(), now.getDate(), alarmHours, alarmMinutes, 0);
 
-        // If alarm time has passed for today, set for tomorrow
-        if (alarmDate < now) {
+        // Calculate the next alarm occurrence for countdown
+        let alarmDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), alarmHours, alarmMinutes, 0);
+        if (alarmDate <= now) {
             alarmDate.setDate(alarmDate.getDate() + 1);
         }
 
-        // Check if the alarm should trigger (when time matches exactly)
-        const timeUntilAlarm = alarmDate.getTime() - now.getTime();
-        const secondsUntilAlarm = Math.floor(timeUntilAlarm / 1000);
-
-        // Trigger alarm when the countdown reaches 0 or has passed
-        // This ensures it triggers reliably even if the check is slightly delayed
-        if (timeUntilAlarm <= 0 && !item.alarmTriggered) {
+        // Check if it's time to trigger the alarm (at today's alarm time)
+        if (now.getTime() >= todayAlarm.getTime() && now.getTime() < todayAlarm.getTime() + 1000 && !item.alarmTriggered) {
             triggerMedicineAlarm(item.id, item.name);
             item.alarmTriggered = true; // Mark as triggered to prevent multiple triggers
             saveToLocal(false); // Save state without re-rendering to avoid disrupting countdowns
-        } else if (timeUntilAlarm > 0 && item.alarmTriggered) {
-            // Reset triggered flag if alarm is now in the future (e.g., after stop or next day)
+        }
+
+        const timeUntilAlarm = alarmDate.getTime() - now.getTime();
+
+        // Reset triggered flag if alarm is now in the future
+        if (timeUntilAlarm > 0 && item.alarmTriggered) {
             item.alarmTriggered = false;
             saveToLocal(false);
         }
@@ -1239,11 +1240,11 @@ window.triggerMedicineAlarm = function(id, name) {
         alarmScreen.style.zIndex = '9999';
 
         // Add click handler to play audio on user interaction (for mobile autoplay restrictions)
-        const playAudioOnClick = () => {
+        window.playAudioHandler = () => {
             playAlarmSound();
-            alarmScreen.removeEventListener('click', playAudioOnClick);
+            alarmScreen.removeEventListener('click', window.playAudioHandler);
         };
-        alarmScreen.addEventListener('click', playAudioOnClick);
+        alarmScreen.addEventListener('click', window.playAudioHandler);
     }
     if (alarmNameDisplay) {
         alarmNameDisplay.textContent = name || "Medicine";
@@ -1269,35 +1270,15 @@ window.triggerMedicineAlarm = function(id, name) {
     }
 };
 
-// Function to play alarm sound using Web Audio API to bypass autoplay restrictions
+// Function to play alarm sound (copying the call simulation approach)
 function playAlarmSound() {
     const audioEl = getMedicineAlarmAudioEl();
     if (audioEl) {
         medicineAlarmAudio = audioEl;
-        audioEl.currentTime = 0;
-        audioEl.volume = 0.7;
+        audioEl.currentTime = 0; // Reset audio to start
+        audioEl.volume = 0.7; // Set volume
         audioEl.loop = true; // Make sure it loops
-
-        // Try to play with Web Audio API to bypass restrictions
-        if (!audioContext) {
-            try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            } catch (e) {
-                console.warn("Web Audio API not supported");
-            }
-        }
-
-        if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume().then(() => {
-                audioEl.play().catch(e => {
-                    console.warn("Audio play failed even after resume: ", e);
-                });
-            });
-        } else {
-            audioEl.play().catch(e => {
-                console.warn("Autoplay blocked, audio will play on user interaction: ", e);
-            });
-        }
+        audioEl.play().catch(e => console.error("Error playing alarm: ", e));
     }
 }
 
@@ -1316,8 +1297,16 @@ window.stopMedicineAlarmSound = function() {
     const audioEl = getMedicineAlarmAudioEl();
     if (audioEl) {
         medicineAlarmAudio = audioEl;
-        audioEl.pause();
-        audioEl.currentTime = 0;
+        audioEl.loop = false; // Disable looping first
+        audioEl.volume = 0; // Mute immediately
+        audioEl.pause(); // Stop playback
+        audioEl.currentTime = 0; // Reset to beginning
+        audioEl.src = ''; // Clear src to prevent any further playback
+        try {
+            audioEl.load(); // Forcefully reset the audio element
+        } catch (e) {
+            console.warn("Could not reset audio element:", e);
+        }
     }
     const alarmScreen = document.getElementById('medicine-alarm-screen');
     if (alarmScreen) {
@@ -1325,14 +1314,16 @@ window.stopMedicineAlarmSound = function() {
         // Clear any inline styles set when triggering (prevents getting "stuck" visible)
         alarmScreen.style.display = '';
         alarmScreen.style.zIndex = '';
+        // Remove any remaining click handlers
+        if (window.playAudioHandler) {
+            alarmScreen.removeEventListener('click', window.playAudioHandler);
+        }
     }
-    
-    // Reset the triggered flag for the active alarm
+
+    // Keep the triggered flag true to prevent re-triggering until next day
     if (activeMedicineAlarmId) {
-        const med = data.meds.find(m => m.id === activeMedicineAlarmId);
-        if (med) med.alarmTriggered = false;
         activeMedicineAlarmId = null;
-        saveToLocal(false);
+        saveToLocal(); // Save and re-render to update countdown
     }
 
     // If the alarm UI ever becomes its own page in the future, this will return correctly.
@@ -1345,21 +1336,6 @@ window.stopMedicineAlarmSound = function() {
 };
 
 window.snoozeMedicineAlarm = function() {
-    // Keep the id before stop clears it
-    const snoozeId = activeMedicineAlarmId;
+    // Make snooze behave exactly like stop: stop the alarm and set for tomorrow
     stopMedicineAlarmSound();
-
-    if (snoozeId) {
-        const med = data.meds.find(m => m.id === snoozeId);
-        if (med) {
-            // Set the alarm for 5 minutes from now
-            const now = new Date();
-            now.setMinutes(now.getMinutes() + 5);
-            const newAlarmTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-            med.time = newAlarmTime;
-            med.alarmTriggered = false; // Reset triggered flag
-            saveToLocal(); // Save and re-render to update countdown
-        }
-    }
-    activeMedicineAlarmId = null; // Clear active alarm
 };
