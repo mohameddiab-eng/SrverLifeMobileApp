@@ -746,11 +746,11 @@ function renderMeds() {
         container.innerHTML = '<div class="text-center text-gray-500 mt-10 text-xl font-bold">No medications</div>';
         return;
     }
-    container.innerHTML = data.meds.map(item => {
+    container.innerHTML = `<div style="max-height: 60vh; overflow-y-auto;">${data.meds.map(item => {
         const now = new Date();
         const [alarmHours, alarmMinutes] = item.time.split(':').map(Number);
         let alarmDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), alarmHours, alarmMinutes, 0);
-        
+
         // If the alarm time has passed for today, set it for tomorrow
         if (alarmDate < now && !item.alarmTriggered) {
             alarmDate.setDate(alarmDate.getDate() + 1);
@@ -784,7 +784,7 @@ function renderMeds() {
             <button onclick="deleteItem(event, 'meds', '${item.id}')" class="bg-red-50 text-red-500 p-4 rounded-xl tap-effect border border-red-100"><i class="fas fa-trash-alt text-2xl"></i></button>
         </div>
         `;
-    }).join('');
+    }).join('')}</div>`;
 }
 
 function renderContacts() {
@@ -793,7 +793,7 @@ function renderContacts() {
         container.innerHTML = '<div class="text-center text-gray-500 mt-10 text-xl font-bold">No contacts</div>';
         return;
     }
-    container.innerHTML = data.contacts.map(item => `
+    container.innerHTML = `<div style="max-height: 60vh; overflow-y-auto;">${data.contacts.map(item => `
         <div class="flex gap-2 mb-4">
             <div onclick="startFakeCall('${item.name}', '${item.phone}')" class="flex-1 bg-white p-4 rounded-2xl shadow-sm flex items-center tap-effect border border-gray-100">
                 <div class="bg-green-100 text-green-700 w-16 h-16 rounded-full flex items-center justify-center text-3xl mr-4 shrink-0">
@@ -808,7 +808,7 @@ function renderContacts() {
                 <i class="fas fa-trash-alt text-2xl"></i>
             </button>
         </div>
-    `).join('');
+    `).join('')}</div>`;
 }
 
 function renderTasks() {
@@ -834,7 +834,7 @@ function renderShop() {
         container.innerHTML = '<div class="text-center text-gray-500 mt-10 text-xl font-bold">List is empty</div>';
         return;
     }
-    container.innerHTML = data.shop.map(item => `
+    container.innerHTML = `<div style="max-height: 60vh; overflow-y-auto;">${data.shop.map(item => `
         <div class="bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4 transition-all ${item.done ? 'opacity-60 bg-gray-50' : ''} mb-3 border-l-8 ${item.done ? 'border-gray-300' : 'border-lime-500'}">
             <button onclick="toggleTask('${item.id}', 'shop')" class="w-12 h-12 rounded-full border-4 ${item.done ? 'bg-lime-500 border-lime-500' : 'border-gray-300'} flex items-center justify-center shrink-0">
                 ${item.done ? '<i class="fas fa-circle text-green-500 text-xl"></i>' : ''}
@@ -842,7 +842,7 @@ function renderShop() {
             <span class="flex-1 text-2xl font-bold ${item.done ? 'text-gray-400' : 'text-gray-800'}">${item.desc}</span>
             <button onclick="deleteItem(event, 'shop', '${item.id}')" class="text-red-300 p-4 hover:text-red-500"><i class="fas fa-trash-alt text-2xl"></i></button>
         </div>
-    `).join('');
+    `).join('')}</div>`;
 }
 
 function renderSchedule() {

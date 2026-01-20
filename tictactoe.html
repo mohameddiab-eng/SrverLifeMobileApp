@@ -126,7 +126,7 @@
         }
     </style>
 </head>
-<body class="h-screen overflow-hidden flex flex-col entertainment-theme transition-all duration-500">
+body class="h-screen overflow-auto flex flex-col entertainment-theme transition-all duration-500">
     <!-- Modern Accessibility Panel -->
     <div id="access-bar" class="modern-access-panel">
         <div class="access-header">
@@ -247,7 +247,7 @@
     </button>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto no-scrollbar p-4 relative flex flex-col items-center">
+    <main class="flex-1 overflow-y-auto no-scrollbar p-4 relative flex flex-col items-center" style="touch-action: pan-y;">
         <section id="tictactoe" class="page-section active flex flex-col items-center">
             <div class="bg-gradient-to-r from-purple-100 via-purple-50 to-purple-100 border-l-4 border-purple-500 p-6 mb-6 rounded-xl shadow-lg text-center relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-20 h-20 bg-purple-200/30 rounded-full -mr-10 -mt-10"></div>
@@ -287,14 +287,15 @@
             <h2 class="text-xl font-bold text-gray-800">Menu</h2>
         </div>
         <a href="index.html" class="menu-item home-bg"><i class="fas fa-home"></i> Home</a>
-        <a href="shop.html" class="menu-item shop-bg"><i class="fas fa-shopping-cart"></i> Shop List</a>
-        <a href="wellness.html" class="menu-item wellness-bg"><i class="fas fa-heart"></i> Exercise</a>
+        <a href="shop.html" class="menu-item shop-bg"><i class="fas fa-list-alt"></i> Shop List</a>
+        <a href="wellness.html" class="menu-item wellness-bg"><i class="fas fa-list-alt"></i> Exercise</a>
         <a href="contacts.html" class="menu-item contacts-bg"><i class="fas fa-phone"></i> Call</a>
         <a href="meds.html" class="menu-item meds-bg"><i class="fas fa-pills"></i> Medicine</a>
         <a href="schedule.html" class="menu-item schedule-bg"><i class="fas fa-list-alt"></i> Schedule</a>
         <a href="tasks.html" class="menu-item tasks-bg"><i class="fas fa-check"></i> To-Do</a>
-        <a href="notes.html" class="menu-item notes-bg"><i class="fas fa-pen"></i> My Diary</a>
+        <a href="notes.html" class="menu-item notes-bg"><i class="fas fa-list-alt"></i> My Diary</a>
         <a href="entertainment.html" class="menu-item entertainment-bg"><i class="fas fa-gamepad"></i> Entertainment</a>
+        <a href="memories.html" class="menu-item memories-bg"><i class="fas fa-camera"></i> Memories</a>
     </div>
 
     <!-- Menu Overlay -->
