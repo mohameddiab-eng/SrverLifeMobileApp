@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Tetris</title>
+    <script>
+      (function () {
+        try {
+          const isFramed = window.self !== window.top;
+          if (isFramed) return;
+          if (window.location.pathname.endsWith('/frame.html')) return;
+          if (window.innerWidth >= 700) {
+            const page = (window.location.pathname.split('/').pop() || 'index.html');
+            window.location.replace(`frame.html?page=${encodeURIComponent(page)}`);
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .tetris-grid-container {
+            background: linear-gradient(135deg, #0d121c 0%, #1a1f2e 100%);
+            border: 8px solid #2a3447;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(139, 92, 246, 0.2);
+            position: relative;
+        }
+        .tetris-grid-container::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2));
+            border-radius: 16px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .tetris-grid-container:hover::before {
+            opacity: 1;
+        }
+        .tetris-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 20px);
+            grid-template-rows: repeat(20, 20px);
+            background: linear-gradient(135deg, #000 0%, #0a0a0a 100%);
+            border: 3px solid #374151;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9), 0 0 20px rgba(139, 92, 246, 0.1);
+            margin-right: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .grid-cell {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+
+        .next-piece-display {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #000 0%, #0a0a0a 100%);
+            border: 3px solid #374151;
+            margin-top: 0;
+            display: grid;
+            grid-template-columns: repeat(4, 20px);
+            grid-template-rows: repeat(4, 20px);
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9), 0 0 20px rgba(139, 92, 246, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .tetris-block {
+            /* background-color is set dynamically by JavaScript */
+            border: 2px solid rgba(255, 255, 255, 0.4) !important;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4), 0 0 15px currentColor, inset 0 2px 6px rgba(255, 255, 255, 0.3) !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 3px;
+            position: relative;
+        }
+        .tetris-block::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+            pointer-events: none;
+            border-radius: 3px;
+        }
+        .tetris-block:hover {
+            filter: brightness(1.15);
+            transform: scale(1.02);
+        }
+        /* Mobile controls specific styling */
+        .mobile-controls {
+            display: flex; /* Ensure flex layout */
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            justify-content: center; /* Center buttons */
+            gap: 10px; /* Space between buttons */
+        }
+        .mobile-controls button {
+            min-width: 65px;
+            min-height: 65px;
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            color: #e5e7eb;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-radius: 50%;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .mobile-controls button::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(139, 92, 246, 0.3) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .mobile-controls button:hover::before {
+            opacity: 1;
+        }
+        .mobile-controls button:hover {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 16px rgba(139, 92, 246, 0.4), 0 0 0 2px rgba(139, 92, 246, 0.3);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        .mobile-controls button:active {
+            transform: translateY(0) scale(0.95);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Dark Mode Styles for Tetris */
+        body.dark-mode .tetris-grid-container {
+            background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%) !important;
+            border-color: #374151 !important;
+        }
+        
+        body.dark-mode .tetris-grid,
+        body.dark-mode .next-piece-display {
+            background: linear-gradient(135deg, #0a0a0a 0%, #000000 100%) !important;
+            border-color: #4b5563 !important;
+        }
+        
+        body.dark-mode .grid-cell {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        body.dark-mode .game-info {
+            background: linear-gradient(to bottom right, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.95) 100%) !important;
+            border-color: rgba(55, 65, 81, 0.5) !important;
+        }
+        
+        /* High Contrast Mode Styles for Tetris */
+        body.high-contrast .tetris-grid-container {
+            background: #111111 !important;
+            border: 8px solid #fbbf24 !important;
+        }
+        
+        body.high-contrast .tetris-grid,
+        body.high-contrast .next-piece-display {
+            background: #000000 !important;
+            border: 3px solid #fbbf24 !important;
+        }
+        
+        body.high-contrast .grid-cell {
+            background: #111111 !important;
+            border: 1px solid rgba(251, 191, 36, 0.3) !important;
+        }
+        
+        body.high-contrast .game-info {
+            background: #111111 !important;
+            border: 2px solid #fbbf24 !important;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col entertainment-theme transition-all duration-500">
+    <!-- Modern Accessibility Panel -->
+    <div id="access-bar" class="modern-access-panel">
+        <div class="access-header">
+            <div class="flex items-center gap-3">
+                <div class="access-icon-wrapper">
+                    <i class="fas fa-universal-access"></i>
+                </div>
+                <div>
+                    <h3 class="access-title">Accessibility</h3>
+                    <p class="access-subtitle">Customize your experience</p>
+                </div>
+            </div>
+            <button onclick="toggleAccessBar()" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="access-content">
+            <!-- Text Size Section -->
+            <div class="access-section">
+                <div class="section-header">
+                    <i class="fas fa-text-height"></i>
+                    <span>Text Size</span>
+                </div>
+                <div class="size-selector">
+                    <button onclick="setAccess('size', 'normal')" class="size-btn" data-size="normal">
+                        <span class="size-label">A</span>
+                        <span class="size-desc">Normal</span>
+                    </button>
+                    <button onclick="setAccess('size', 'large')" class="size-btn active" data-size="large">
+                        <span class="size-label">A+</span>
+                        <span class="size-desc">Large</span>
+                    </button>
+                    <button onclick="setAccess('size', 'xl')" class="size-btn" data-size="xl">
+                        <span class="size-label">A++</span>
+                        <span class="size-desc">Extra Large</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Display Mode Section -->
+            <div class="access-section">
+                <div class="section-header">
+                    <i class="fas fa-palette"></i>
+                    <span>Display Mode</span>
+                </div>
+                <div class="mode-grid">
+                    <button onclick="setAccess('mode', 'light')" class="mode-card">
+                        <div class="mode-icon light-mode-icon">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        <span class="mode-name">Light</span>
+                    </button>
+                    <button onclick="setAccess('mode', 'dark')" class="mode-card">
+                        <div class="mode-icon dark-mode-icon">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <span class="mode-name">Dark</span>
+                    </button>
+                    <button onclick="setAccess('mode', 'contrast')" class="mode-card">
+                        <div class="mode-icon contrast-mode-icon">
+                            <i class="fas fa-adjust"></i>
+                        </div>
+                        <span class="mode-name">High Contrast</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Voice Assistant Section -->
+            <div class="access-section">
+                <div class="section-header">
+                    <i class="fas fa-volume-up"></i>
+                    <span>Voice Assistant</span>
+                </div>
+                <div class="voice-controls">
+                    <button onclick="readPage()" class="voice-btn primary">
+                        <i class="fas fa-play"></i>
+                        <span>Read Page</span>
+                    </button>
+                    <button onclick="stopReading()" class="voice-btn secondary">
+                        <i class="fas fa-stop"></i>
+                        <span>Stop</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <button onclick="setAccess('reset')" class="reset-btn">
+                <i class="fas fa-undo"></i>
+                <span>Reset All Settings</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-teal-600 text-white p-4 shadow-md z-30 sticky top-0 flex justify-between items-center h-16">
+        <div class="flex items-center gap-2">
+            <button id="menu-button" class="bg-teal-700 w-10 h-10 rounded-full flex items-center justify-center tap-effect border border-teal-500 shadow-sm" aria-label="Menu">
+                <i class="fas fa-bars text-lg"></i>
+            </button>
+            <img src="SA.png" alt="Tetris Logo" class="w-8 h-8 rounded-full mr-2 app-logo">
+            <h1 class="text-2xl font-bold truncate">Tetris</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <select id="game-switcher" class="bg-teal-700 text-white p-2 rounded-full text-sm mr-2 tap-effect focus:ring-2 focus:ring-teal-400">
+                <option value="entertainment.html">Games Hub</option>
+                <option value="tetris.html" selected>Tetris</option>
+                <option value="tictactoe.html">Tic-Tac-Toe</option>
+                <option value="sudoku.html">Sudoku</option>
+             
+            </select>
+        </div>
+    </header>
+
+    <!-- Floating Accessibility Button -->
+    <button onclick="toggleAccessBar()" class="floating-access-btn" aria-label="Accessibility Settings" title="Accessibility">
+        <i class="fas fa-universal-access"></i>
+    </button>
+    <audio id="tetris-audio" src="tetris_song.mp3" loop preload="auto"></audio>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto no-scrollbar p-4 relative flex flex-col items-center">
+        <section id="tetris" class="page-section active flex flex-col items-center">
+            <div class="bg-gradient-to-r from-purple-100 via-purple-50 to-purple-100 border-l-4 border-purple-500 p-6 mb-6 rounded-xl shadow-lg text-center relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-20 h-20 bg-purple-200/30 rounded-full -mr-10 -mt-10"></div>
+                <p id="game-status" class="text-purple-900 font-bold text-xl relative z-10 flex items-center justify-center gap-2">
+                    <i class="fas fa-cube text-2xl"></i>
+                    Get Ready!
+                </p>
+            </div>
+            
+            <div class="tetris-grid-container flex-row items-start gap-4">
+                <div class="game-info flex flex-col items-center p-6 bg-gradient-to-br from-gray-800/95 to-gray-900/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-700/50">
+                    <h3 class="text-white text-xl font-bold mb-3">Next Piece</h3>
+                    <div class="next-piece-display" id="next-piece-display">
+                        <!-- Next Tetris piece will be shown here -->
+                    </div>
+                    <div class="mt-6 w-full space-y-3">
+                        <div class="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 backdrop-blur-sm p-4 rounded-xl border border-yellow-400/30">
+                            <h3 class="text-white text-xl font-bold mb-1 flex items-center gap-2">
+                                <i class="fas fa-trophy text-yellow-400"></i>
+                                Score: <span id="score" class="text-yellow-400 drop-shadow-lg">0</span>
+                            </h3>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-sm p-4 rounded-xl border border-green-400/30">
+                            <h3 class="text-white text-xl font-bold mb-1 flex items-center gap-2">
+                                <i class="fas fa-layer-group text-green-400"></i>
+                                Lines: <span id="lines" class="text-green-400 drop-shadow-lg">0</span>
+                            </h3>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-sm p-4 rounded-xl border border-blue-400/30">
+                            <h3 class="text-white text-xl font-bold flex items-center gap-2">
+                                <i class="fas fa-star text-blue-400"></i>
+                                Level: <span id="level" class="text-blue-400 drop-shadow-lg">1</span>
+                            </h3>
+                        </div>
+                    </div>
+                    <button id="mute-button" class="mt-4 bg-gray-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg tap-effect hover:bg-gray-600 flex items-center justify-center gap-2">
+                        <i class="fas fa-volume-up"></i> <span id="mute-text">Mute</span>
+                    </button>
+                </div>
+                <div class="tetris-grid" id="tetris-grid">
+                    <!-- Tetris grid cells will be generated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="flex gap-4 mt-6">
+                <button id="start-game-btn" class="bg-purple-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg tap-effect hover:bg-purple-700">Start Game</button>
+                <button id="pause-game-btn" class="bg-gray-400 text-white font-bold py-3 px-6 rounded-xl shadow-lg tap-effect hover:bg-gray-500">Pause</button>
+                <button id="reset-game-btn" class="bg-red-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg tap-effect hover:bg-red-600">Reset</button>
+            </div>
+            
+            <!-- Mobile Controls -->
+            <div class="mobile-controls mt-8 w-full flex justify-center gap-4 md:hidden">
+                <button id="move-left" class="bg-gray-700 text-white p-4 rounded-full text-2xl tap-effect"><i class="fas fa-arrow-left"></i></button>
+                <button id="rotate" class="bg-gray-700 text-white p-4 rounded-full text-2xl tap-effect"><i class="fas fa-redo-alt"></i></button>
+                <button id="move-right" class="bg-gray-700 text-white p-4 rounded-full text-2xl tap-effect"><i class="fas fa-arrow-right"></i></button>
+                <button id="soft-drop" class="bg-gray-700 text-white p-4 rounded-full text-2xl tap-effect"><i class="fas fa-arrow-down"></i></button>
+                <button id="hard-drop" class="bg-gray-700 text-white p-4 rounded-full text-2xl tap-effect"><i class="fas fa-angle-double-down"></i></button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Sidebar Menu -->
+    <div id="sidebar-menu">
+        <div class="p-4 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">Menu</h2>
+        </div>
+        <a href="index.html" class="menu-item home-bg"><i class="fas fa-home"></i> Home</a>
+        <a href="shop.html" class="menu-item shop-bg"><i class="fas fa-shopping-cart"></i> Shop List</a>
+        <a href="wellness.html" class="menu-item wellness-bg"><i class="fas fa-heart"></i> Exercise</a>
+        <a href="contacts.html" class="menu-item contacts-bg"><i class="fas fa-phone"></i> Call</a>
+        <a href="meds.html" class="menu-item meds-bg"><i class="fas fa-pills"></i> Medicine</a>
+        <a href="schedule.html" class="menu-item schedule-bg"><i class="fas fa-list-alt"></i> Schedule</a>
+        <a href="tasks.html" class="menu-item tasks-bg"><i class="fas fa-check"></i> To-Do</a>
+        <a href="notes.html" class="menu-item notes-bg"><i class="fas fa-pen"></i> My Diary</a>
+        <a href="entertainment.html" class="menu-item entertainment-bg"><i class="fas fa-gamepad"></i> Entertainment</a>
+    </div>
+
+    <!-- Menu Overlay -->
+    <div id="menu-overlay"></div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            applyAccessSettings();
+            
+            const tetrisGrid = document.getElementById('tetris-grid');
+            const nextPieceDisplay = document.getElementById('next-piece-display');
+            const scoreDisplay = document.getElementById('score');
+            const linesDisplay = document.getElementById('lines');
+            const levelDisplay = document.getElementById('level');
+            const gameStatus = document.getElementById('game-status');
+            const startGameBtn = document.getElementById('start-game-btn');
+            const pauseGameBtn = document.getElementById('pause-game-btn');
+            const resetGameBtn = document.getElementById('reset-game-btn');
+            const tetrisAudio = document.getElementById('tetris-audio');
+            const muteButton = document.getElementById('mute-button');
+            const muteText = document.getElementById('mute-text');
+            let isMuted = false;
+
+            // Mobile controls
+            const moveLeftBtn = document.getElementById('move-left');
+            const rotateBtn = document.getElementById('rotate');
+            const moveRightBtn = document.getElementById('move-right');
+            const softDropBtn = document.getElementById('soft-drop');
+            const hardDropBtn = document.getElementById('hard-drop');
+
+            // Game switcher logic
+            const gameSwitcher = document.getElementById('game-switcher');
+            gameSwitcher.addEventListener('change', (event) => {
+                window.location.href = event.target.value;
+            });
+
+            const GRID_WIDTH = 10;
+            const GRID_HEIGHT = 20;
+            const BLOCK_SIZE = 25; // px
+            let gameBoard = Array(GRID_HEIGHT).fill(0).map(() => Array(GRID_WIDTH).fill(0));
+
+            let currentPiece = null;
+            let nextPiece = null;
+            let score = 0;
+            let lines = 0;
+            let level = 1;
+            let gameOverState = true;
+            let gamePaused = false;
+            let gameInterval = null;
+            let dropTime = 1000; // milliseconds
+
+            // Tetromino shapes (coordinates relative to top-left of 4x4 block)
+            const TETROMINOS = [
+                // I
+                [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],
+                [[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]],
+                // J
+                [[1, 0, 0], [1, 1, 1], [0, 0, 0]],
+                [[0, 1, 1], [0, 1, 0], [0, 1, 0]],
+                [[0, 0, 0], [1, 1, 1], [0, 0, 1]],
+                [[0, 1, 0], [0, 1, 0], [1, 1, 0]],
+                // L
+                [[0, 0, 1], [1, 1, 1], [0, 0, 0]],
+                [[0, 1, 0], [0, 1, 0], [0, 1, 1]],
+                [[0, 0, 0], [1, 1, 1], [1, 0, 0]],
+                [[1, 1, 0], [0, 1, 0], [0, 1, 0]],
+                // O
+                [[1, 1], [1, 1]],
+                // S
+                [[0, 1, 1], [1, 1, 0], [0, 0, 0]],
+                [[0, 1, 0], [0, 1, 1], [0, 0, 1]],
+                // T
+                [[0, 1, 0], [1, 1, 1], [0, 0, 0]],
+                [[0, 1, 0], [0, 1, 1], [0, 1, 0]],
+                [[0, 0, 0], [1, 1, 1], [0, 1, 0]],
+                [[0, 1, 0], [1, 1, 0], [0, 1, 0]],
+                // Z
+                [[1, 1, 0], [0, 1, 1], [0, 0, 0]],
+                [[0, 0, 1], [0, 1, 1], [0, 1, 0]]
+            ];
+
+            const COLORS = [
+                '#00F0FF', // I - Bright Cyan
+                '#6C5CE7', // J - Vibrant Purple
+                '#FF6B6B', // L - Coral Red
+                '#FFD93D', // O - Golden Yellow
+                '#6BCB77', // S - Fresh Green
+                '#A29BFE', // T - Soft Purple
+                '#FF8C42'  // Z - Orange
+            ];
+
+            function createGrid(container, width, height) {
+                container.innerHTML = '';
+                for (let i = 0; i < width * height; i++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('grid-cell');
+                    container.appendChild(cell);
+                }
+            }
+
+            createGrid(tetrisGrid, GRID_WIDTH, GRID_HEIGHT);
+            createGrid(nextPieceDisplay, 4, 4); // 4x4 for next piece preview
+            const gridCells = Array.from(tetrisGrid.children); // Get actual DOM elements
+
+            function draw() {
+                // Draw gameBoard (locked pieces)
+                for (let r = 0; r < GRID_HEIGHT; r++) {
+                    for (let c = 0; c < GRID_WIDTH; c++) {
+                        const index = r * GRID_WIDTH + c;
+                        if (gameBoard[r][c] !== 0) {
+                            gridCells[index].style.background = gameBoard[r][c];
+                            gridCells[index].classList.add('tetris-block');
+                        } else {
+                            gridCells[index].style.background = ''; // Default background
+                            gridCells[index].classList.remove('tetris-block');
+                        }
+                    }
+                }
+
+                // Draw currentPiece
+                if (currentPiece) {
+                    currentPiece.shape.forEach((row, r) => {
+                        row.forEach((value, c) => {
+                            if (value === 1) {
+                                const boardX = currentPiece.x + c;
+                                const boardY = currentPiece.y + r;
+                                const index = boardY * GRID_WIDTH + boardX;
+                                if (boardX >= 0 && boardX < GRID_WIDTH && boardY >= 0 && boardY < GRID_HEIGHT) {
+                                    gridCells[index].style.background = currentPiece.color;
+                                    gridCells[index].classList.add('tetris-block');
+                                }
+                            }
+                        });
+                    });
+                }
+            }
+
+            function clearPiece(piece) {
+                if (!piece) return;
+                piece.shape.forEach((row, r) => {
+                    row.forEach((value, c) => {
+                        if (value === 1) {
+                            const boardX = piece.x + c;
+                            const boardY = piece.y + r;
+                            const index = boardY * GRID_WIDTH + boardX;
+                            if (boardX >= 0 && boardX < GRID_WIDTH && boardY >= 0 && boardY < GRID_HEIGHT && gameBoard[boardY][boardX] === 0) {
+                                gridCells[index].style.background = '';
+                                gridCells[index].classList.remove('tetris-block');
+                            }
+                        }
+                    });
+                });
+            }
+            
+            // Initial render
+            draw();
+
+
+            // Event Listeners for buttons
+            startGameBtn.addEventListener('click', () => {
+                if (gameOverState || gamePaused) {
+                    startGame();
+                }
+            });
+
+            pauseGameBtn.addEventListener('click', () => {
+                togglePause();
+            });
+
+            resetGameBtn.addEventListener('click', () => {
+                resetGame();
+            });
+
+            muteButton.addEventListener('click', () => {
+                isMuted = !isMuted;
+                if (isMuted) {
+                    tetrisAudio.pause();
+                    muteButton.querySelector('i').classList.replace('fa-volume-up', 'fa-volume-mute');
+                    muteText.textContent = "Unmute";
+                } else {
+                    if (!gameOverState && !gamePaused) {
+                        tetrisAudio.play();
+                    }
+                    muteButton.querySelector('i').classList.replace('fa-volume-mute', 'fa-volume-up');
+                    muteText.textContent = "Mute";
+                }
+            });
+
+            // Placeholder for game functions (will be expanded)
+            function startGame() {
+                console.log('Game Started!');
+                gameOverState = false;
+                gamePaused = false;
+                gameStatus.textContent = "Playing...";
+                // Reset game state
+                score = 0;
+                lines = 0;
+                level = 1;
+                scoreDisplay.textContent = score;
+                linesDisplay.textContent = lines;
+                levelDisplay.textContent = level;
+                gameBoard = Array(GRID_HEIGHT).fill(0).map(() => Array(GRID_WIDTH).fill(0));
+
+                generateNewPiece();
+                gameInterval = setInterval(gameLoop, dropTime);
+                if (!isMuted) {
+                    tetrisAudio.currentTime = 0;
+                    tetrisAudio.play();
+                }
+            }
+
+            function gameLoop() {
+                clearPiece(currentPiece);
+                currentPiece.y++;
+                if (checkCollision()) {
+                    currentPiece.y--;
+                    lockPiece();
+                    clearLines();
+                    generateNewPiece();
+                    if (checkCollision()) { // Game over if new piece immediately collides
+                        gameOver();
+                    }
+                }
+                draw();
+            }
+
+            function togglePause() {
+                gamePaused = !gamePaused;
+                if (gamePaused) {
+                    clearInterval(gameInterval);
+                    gameStatus.textContent = "Paused";
+                    tetrisAudio.pause();
+                } else {
+                    gameInterval = setInterval(gameLoop, dropTime);
+                    gameStatus.textContent = "Playing...";
+                    if (!isMuted) {
+                        tetrisAudio.play();
+                    }
+                }
+            }
+
+            function resetGame() {
+                clearInterval(gameInterval);
+                gameOverState = true;
+                gamePaused = false;
+                gameStatus.textContent = "Get Ready!";
+                gameBoard = Array(GRID_HEIGHT).fill(0).map(() => Array(GRID_WIDTH).fill(0));
+                currentPiece = null;
+                nextPiece = null;
+                score = 0;
+                lines = 0;
+                level = 1;
+                scoreDisplay.textContent = score;
+                linesDisplay.textContent = lines;
+                levelDisplay.textContent = level;
+                draw(); // Redraw empty board
+                clearNextPieceDisplay();
+                tetrisAudio.pause();
+                tetrisAudio.currentTime = 0;
+            }
+
+            function generateNewPiece() {
+                if (!nextPiece) {
+                    nextPiece = getRandomTetromino();
+                }
+                currentPiece = nextPiece;
+                nextPiece = getRandomTetromino();
+
+                // Initial position for new piece
+                currentPiece.x = Math.floor(GRID_WIDTH / 2) - Math.floor(currentPiece.shape[0].length / 2);
+                currentPiece.y = 0; // Start at the top
+
+                drawNextPiece();
+            }
+
+            function getRandomTetromino() {
+                const tetrominoTypes = [
+                    { shape: [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]], color: COLORS[0], rotations: 2 }, // I
+                    { shape: [[1,0,0], [1,1,1], [0,0,0]], color: COLORS[1], rotations: 4 }, // J
+                    { shape: [[0,0,1], [1,1,1], [0,0,0]], color: COLORS[2], rotations: 4 }, // L
+                    { shape: [[1,1], [1,1]], color: COLORS[3], rotations: 1 }, // O
+                    { shape: [[0,1,1], [1,1,0], [0,0,0]], color: COLORS[4], rotations: 2 }, // S
+                    { shape: [[0,1,0], [1,1,1], [0,0,0]], color: COLORS[5], rotations: 4 }, // T
+                    { shape: [[1,1,0], [0,1,1], [0,0,0]], color: COLORS[6], rotations: 2 }  // Z
+                ];
+                const randomIndex = Math.floor(Math.random() * tetrominoTypes.length);
+                const { shape, color, rotations } = tetrominoTypes[randomIndex];
+                return { shape, x: 0, y: 0, color, rotation: 0, rotations: rotations, typeIndex: randomIndex };
+            }
+
+            function checkCollision(piece = currentPiece) {
+                for (let r = 0; r < piece.shape.length; r++) {
+                    for (let c = 0; c < piece.shape[r].length; c++) {
+                        if (piece.shape[r][c] === 1) {
+                            const boardX = piece.x + c;
+                            const boardY = piece.y + r;
+                            if (boardX < 0 || boardX >= GRID_WIDTH || boardY >= GRID_HEIGHT || (boardY >= 0 && gameBoard[boardY][boardX] !== 0)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function lockPiece() {
+                currentPiece.shape.forEach((row, r) => {
+                    row.forEach((value, c) => {
+                        if (value === 1) {
+                            const boardX = currentPiece.x + c;
+                            const boardY = currentPiece.y + r;
+                            if (boardY >= 0 && boardY < GRID_HEIGHT) {
+                                gameBoard[boardY][boardX] = currentPiece.color;
+                            }
+                        }
+                    });
+                });
+            }
+
+            function clearLines() {
+                let linesClearedThisTurn = 0;
+                for (let r = GRID_HEIGHT - 1; r >= 0; r--) {
+                    if (gameBoard[r].every(cell => cell !== 0)) {
+                        linesClearedThisTurn++;
+                        // Remove full line and add empty line at top
+                        gameBoard.splice(r, 1);
+                        gameBoard.unshift(Array(GRID_WIDTH).fill(0));
+                        r++; // Recheck the same row index as new line came down
+                    }
+                }
+                if (linesClearedThisTurn > 0) {
+                    lines += linesClearedThisTurn;
+                    score += linesClearedThisTurn * 100 * level; // Simple scoring
+                    linesDisplay.textContent = lines;
+                    scoreDisplay.textContent = score;
+
+                    // Increase level every 10 lines
+                    if (lines >= level * 10) {
+                        level++;
+                        levelDisplay.textContent = level;
+                        dropTime = Math.max(100, dropTime - 100); // Speed up
+                        clearInterval(gameInterval);
+                        gameInterval = setInterval(gameLoop, dropTime);
+                    }
+                }
+            }
+
+            function gameOver() {
+                clearInterval(gameInterval);
+                gameOverState = true;
+                gameStatus.textContent = "Game Over!";
+                tetrisAudio.pause();
+            }
+
+            function drawNextPiece() {
+                const nextCells = Array.from(nextPieceDisplay.children);
+                // Clear previous next piece
+                nextCells.forEach(cell => {
+                    cell.style.background = '';
+                    cell.classList.remove('tetris-block');
+                });
+
+                if (nextPiece) {
+                    nextPiece.shape.forEach((row, r) => {
+                        row.forEach((value, c) => {
+                            if (value === 1) {
+                                const index = r * 4 + c;
+                                if (nextCells[index]) {
+                                    nextCells[index].style.background = nextPiece.color;
+                                    nextCells[index].classList.add('tetris-block');
+                                }
+                            }
+                        });
+                    });
+                }
+            }
+
+            function clearNextPieceDisplay() {
+                const nextCells = Array.from(nextPieceDisplay.children);
+                nextCells.forEach(cell => {
+                    cell.style.background = '';
+                    cell.classList.remove('tetris-block');
+                });
+            }
+
+            // Keyboard controls
+            document.addEventListener('keydown', e => {
+                if (gameOverState || gamePaused) return;
+
+                clearPiece(currentPiece);
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        currentPiece.x--;
+                        if (checkCollision()) currentPiece.x++;
+                        break;
+                    case 'ArrowRight':
+                        currentPiece.x++;
+                        if (checkCollision()) currentPiece.x--;
+                        break;
+                    case 'ArrowDown':
+                        currentPiece.y++;
+                        if (checkCollision()) {
+                            currentPiece.y--;
+                            lockPiece();
+                            clearLines();
+                            generateNewPiece();
+                            if (checkCollision()) { gameOver(); }
+                        }
+                        break;
+                    case 'ArrowUp': // Rotate
+                        rotatePiece();
+                        break;
+                    case ' ': // Hard Drop
+                        e.preventDefault(); // Prevent page scroll
+                        while (!checkCollision()) {
+                            currentPiece.y++;
+                        }
+                        currentPiece.y--;
+                        lockPiece();
+                        clearLines();
+                        generateNewPiece();
+                        if (checkCollision()) { gameOver(); }
+                        break;
+                }
+                draw();
+            });
+
+            function rotatePiece() {
+                const originalShape = currentPiece.shape;
+                const N = originalShape.length;
+                let newShape = Array(N).fill(0).map(() => Array(N).fill(0));
+
+                for (let r = 0; r < N; r++) {
+                    for (let c = 0; c < N; c++) {
+                        newShape[c][N - 1 - r] = originalShape[r][c];
+                    }
+                }
+                currentPiece.shape = newShape;
+                if (checkCollision()) {
+                    currentPiece.shape = originalShape; // Revert if collision
+                } else {
+                    // Clear the old shape cells
+                    originalShape.forEach((row, r) => {
+                        row.forEach((value, c) => {
+                            if (value === 1) {
+                                const boardX = currentPiece.x + c;
+                                const boardY = currentPiece.y + r;
+                                const index = boardY * GRID_WIDTH + boardX;
+                                if (boardX >= 0 && boardX < GRID_WIDTH && boardY >= 0 && boardY < GRID_HEIGHT && gameBoard[boardY][boardX] === 0) {
+                                    gridCells[index].style.background = '';
+                                    gridCells[index].classList.remove('tetris-block');
+                                }
+                            }
+                        });
+                    });
+                }
+            }
+
+            // --- Mobile/touch controls (tap + hold) ---
+            let holdInterval = null;
+            const HOLD_DELAY_MS = 120;
+
+            function stopHold() {
+                if (holdInterval) {
+                    clearInterval(holdInterval);
+                    holdInterval = null;
+                }
+            }
+
+            function stepLeft() {
+                if (gameOverState || gamePaused || !currentPiece) return;
+                clearPiece(currentPiece);
+                currentPiece.x--;
+                if (checkCollision()) currentPiece.x++;
+                draw();
+            }
+            function stepRight() {
+                if (gameOverState || gamePaused || !currentPiece) return;
+                clearPiece(currentPiece);
+                currentPiece.x++;
+                if (checkCollision()) currentPiece.x--;
+                draw();
+            }
+            function stepDown() {
+                if (gameOverState || gamePaused || !currentPiece) return;
+                clearPiece(currentPiece);
+                currentPiece.y++;
+                if (checkCollision()) {
+                    currentPiece.y--;
+                    lockPiece();
+                    clearLines();
+                    generateNewPiece();
+                    if (checkCollision()) { gameOver(); }
+                }
+                draw();
+            }
+            function doHardDrop() {
+                if (gameOverState || gamePaused || !currentPiece) return;
+                clearPiece(currentPiece);
+                while (!checkCollision()) currentPiece.y++;
+                currentPiece.y--;
+                lockPiece();
+                clearLines();
+                generateNewPiece();
+                if (checkCollision()) { gameOver(); }
+                draw();
+            }
+            function doRotate() {
+                if (gameOverState || gamePaused || !currentPiece) return;
+                clearPiece(currentPiece);
+                rotatePiece();
+                draw();
+            }
+
+            function bindHold(btn, stepFn) {
+                if (!btn) return;
+                const start = (e) => {
+                    e.preventDefault();
+                    stepFn(); // immediate
+                    stopHold();
+                    holdInterval = setInterval(stepFn, HOLD_DELAY_MS);
+                };
+                const end = (e) => {
+                    e.preventDefault();
+                    stopHold();
+                };
+                btn.addEventListener('mousedown', start);
+                btn.addEventListener('mouseup', end);
+                btn.addEventListener('mouseleave', end);
+
+                btn.addEventListener('touchstart', start, { passive: false });
+                btn.addEventListener('touchend', end, { passive: false });
+                btn.addEventListener('touchcancel', end, { passive: false });
+            }
+
+            bindHold(moveLeftBtn, stepLeft);
+            bindHold(moveRightBtn, stepRight);
+            bindHold(softDropBtn, stepDown);
+
+            // Single-action buttons
+            rotateBtn.addEventListener('click', doRotate);
+            rotateBtn.addEventListener('touchstart', (e) => { e.preventDefault(); doRotate(); }, { passive: false });
+
+            hardDropBtn.addEventListener('click', doHardDrop);
+            hardDropBtn.addEventListener('touchstart', (e) => { e.preventDefault(); doHardDrop(); }, { passive: false });
+
+        });
+    </script>
+    <div id="medicine-alarm-screen" class="call-screen">
+        <audio id="medicine-alarm-audio" src="alarm_clock.mp3" loop preload="auto"></audio>
+        <div class="flex flex-col items-center w-full">
+            <div class="call-avatar pulse-ring bg-red-500">
+                <i class="fas fa-bell text-white"></i>
+            </div>
+            <h2 id="medicine-alarm-name-display" class="text-3xl font-bold mb-2">Medicine Time</h2>
+            <p class="text-gray-400 text-lg">Time to take your medicine!</p>
+        </div>
+        
+        <div class="w-full flex flex-wrap justify-center gap-4 py-4">
+            <button onclick="snoozeMedicineAlarm()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-clock text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Snooze</span>
+            </button>
+            <button onclick="stopMedicineAlarmSound()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-red-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-times text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Stop</span>
+            </button>
+        </div>
+    </div>
+</body>
+</html>

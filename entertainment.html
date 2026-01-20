@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Entertainment</title>
+    <script>
+      (function () {
+        try {
+          const isFramed = window.self !== window.top;
+          if (isFramed) return;
+          if (window.location.pathname.endsWith('/frame.html')) return;
+          if (window.innerWidth >= 700) {
+            const page = (window.location.pathname.split('/').pop() || 'index.html');
+            window.location.replace(`frame.html?page=${encodeURIComponent(page)}`);
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="h-screen overflow-hidden flex flex-col entertainment-theme transition-all duration-500">
+<svg style="position:absolute;width:0;height:0;pointer-events:none" aria-hidden="true"><defs><filter id="deuteranopia-filter"><feColorMatrix type="matrix" values=" 0.625 0.375 0 0 0 0.7 0.3 0 0 0 0 0.3 0.7 0 0 0 0 0 1 0 "></feColorMatrix></filter><filter id="protanopia-filter"><feColorMatrix type="matrix" values=" 0.567 0.433 0 0 0 0.558 0.442 0 0 0 0 0.242 0.758 0 0 0 0 0 1 0 "></feColorMatrix></filter><filter id="tritanopia-filter"><feColorMatrix type="matrix" values=" 0.95 0.05 0 0 0 0 0.433 0.567 0 0 0 0.475 0.525 0 0 0 0 0 1 0 "></feColorMatrix></filter></defs></svg>
+    <!-- Modern Accessibility Panel -->
+    <div id="access-bar" class="modern-access-panel">
+        <div class="access-header">
+            <div class="flex items-center gap-3">
+                <div class="access-icon-wrapper">
+                    <i class="fas fa-universal-access"></i>
+                </div>
+                <div>
+                    <h3 class="access-title">Accessibility</h3>
+                    <p class="access-subtitle">Customize your experience</p>
+                </div>
+            </div>
+            <button onclick="toggleAccessBar()" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="access-content">
+            <!-- Text Size Section -->
+            <div class="access-section">
+                <div class="section-header">
+                    <i class="fas fa-text-height"></i>
+                    <span>Text Size</span>
+                </div>
+                <div class="size-selector">
+                    <button onclick="setAccess('size', 'normal')" class="size-btn" data-size="normal">
+                        <span class="size-label">A</span>
+                        <span class="size-desc">Normal</span>
+                    </button>
+                    <button onclick="setAccess('size', 'large')" class="size-btn active" data-size="large">
+                        <span class="size-label">A+</span>
+                        <span class="size-desc">Large</span>
+                    </button>
+                    <button onclick="setAccess('size', 'xl')" class="size-btn" data-size="xl">
+                        <span class="size-label">A++</span>
+                        <span class="size-desc">Extra Large</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Display Mode Section -->
+            <div class="access-section">
+                <div class="section-header">
+                    <i class="fas fa-palette"></i>
+                    <span>Display Mode</span>
+                </div>
+                <div class="mode-grid">
+                    <button onclick="setAccess('mode', 'light')" class="mode-card">
+                        <div class="mode-icon light-mode-icon">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        <span class="mode-name">Light</span>
+                    </button>
+                    <button onclick="setAccess('mode', 'dark')" class="mode-card">
+                        <div class="mode-icon dark-mode-icon">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <span class="mode-name">Dark</span>
+                    </button>
+                    <button onclick="setAccess('mode', 'contrast')" class="mode-card">
+                        <div class="mode-icon contrast-mode-icon">
+                            <i class="fas fa-adjust"></i>
+                        </div>
+                        <span class="mode-name">High Contrast</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Voice Assistant Section -->
+            <div class="access-section">
+                <div class="section-header">
+                    <i class="fas fa-volume-up"></i>
+                    <span>Voice Assistant</span>
+                </div>
+                <div class="voice-controls">
+                    <button onclick="readPage()" class="voice-btn primary">
+                        <i class="fas fa-play"></i>
+                        <span>Read Page</span>
+                    </button>
+                    <button onclick="stopReading()" class="voice-btn secondary">
+                        <i class="fas fa-stop"></i>
+                        <span>Stop</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <button onclick="setAccess('reset')" class="reset-btn">
+                <i class="fas fa-undo"></i>
+                <span>Reset All Settings</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-teal-600 text-white p-4 shadow-md z-30 sticky top-0 flex justify-between items-center h-16">
+        <div class="flex items-center gap-2">
+            <button id="menu-button" class="bg-teal-700 w-10 h-10 rounded-full flex items-center justify-center tap-effect border border-teal-500 shadow-sm" aria-label="Menu">
+                <i class="fas fa-bars text-lg"></i>
+            </button>
+            <img src="SA.png" alt="Entertainment Logo" class="w-8 h-8 rounded-full mr-2 app-logo">
+            <h1 class="text-2xl font-bold truncate">Entertainment</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="game-switcher-container">
+                <select id="game-switcher" class="game-switcher-select">
+                    <option value="entertainment.html">Games Hub</option>
+
+                    <option value="tetris.html">Tetris</option>
+                    <option value="tictactoe.html">Tic-Tac-Toe</option>
+                    <option value="sudoku.html">Sudoku</option>
+                </select>
+                <i class="fas fa-chevron-down game-switcher-icon"></i>
+            </div>
+        </div>
+    </header>
+    
+    <style>
+        .game-switcher-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .game-switcher-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 8px 40px 8px 16px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .game-switcher-select:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .game-switcher-select:focus {
+            border-color: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2), 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .game-switcher-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: white;
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+        
+        .game-switcher-select:focus + .game-switcher-icon,
+        .game-switcher-select:active + .game-switcher-icon {
+            transform: translateY(-50%) rotate(180deg);
+        }
+        
+        .game-switcher-select option {
+            background: #1f2937;
+            color: white;
+            padding: 12px;
+        }
+        
+        /* Dark mode support */
+        body.dark-mode .game-switcher-select {
+            background: linear-gradient(135deg, rgba(55, 65, 81, 0.8) 0%, rgba(31, 41, 55, 0.8) 100%);
+            border-color: rgba(156, 163, 175, 0.3);
+        }
+        
+        body.dark-mode .game-switcher-select:hover {
+            background: linear-gradient(135deg, rgba(75, 85, 99, 0.9) 0%, rgba(55, 65, 81, 0.9) 100%);
+            border-color: rgba(156, 163, 175, 0.5);
+        }
+    </style>
+
+    <!-- Floating Accessibility Button -->
+    <button onclick="toggleAccessBar()" class="floating-access-btn" aria-label="Accessibility Settings" title="Accessibility">
+        <i class="fas fa-universal-access"></i>
+    </button>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto no-scrollbar p-4 relative">
+        <section id="entertainment" class="page-section active">
+            <div class="bg-gradient-to-r from-purple-100 via-purple-50 to-purple-100 border-l-4 border-purple-500 p-6 mb-6 rounded-xl shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-purple-200/30 rounded-full -mr-12 -mt-12"></div>
+                <p class="text-purple-900 font-bold text-xl relative z-10 flex items-center gap-2">
+                    <i class="fas fa-gamepad text-2xl"></i>
+                    Choose a game to play!
+                </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Game Card 1: Tic-Tac-Toe -->
+                <a href="tictactoe.html" class="block bg-gradient-to-br from-white to-purple-50 p-8 rounded-3xl shadow-xl border-2 border-purple-200 hover:border-purple-500 transition-all duration-300 tap-effect flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-500/0 group-hover:from-purple-500/10 group-hover:to-purple-500/5 transition-all duration-300"></div>
+                    <div class="relative z-10">
+                        <div class="bg-gradient-to-br from-purple-500 to-purple-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                            <i class="fas fa-thumbtack text-4xl text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Tic-Tac-Toe</h3>
+                        <p class="text-gray-600 mt-2">Classic game for two players.</p>
+                    </div>
+                </a>
+
+                <!-- Game Card 2: Sudoku -->
+                <a href="sudoku.html" class="block bg-gradient-to-br from-white to-purple-50 p-8 rounded-3xl shadow-xl border-2 border-purple-200 hover:border-purple-500 transition-all duration-300 tap-effect flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-500/0 group-hover:from-purple-500/10 group-hover:to-purple-500/5 transition-all duration-300"></div>
+                    <div class="relative z-10">
+                        <div class="bg-gradient-to-br from-purple-500 to-purple-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                            <i class="fas fa-puzzle-piece text-4xl text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Sudoku</h3>
+                        <p class="text-gray-600 mt-2">Number puzzle game.</p>
+                    </div>
+                </a>
+
+                <!-- Game Card 3: Tetris -->
+                <a href="tetris.html" class="block bg-gradient-to-br from-white to-purple-50 p-8 rounded-3xl shadow-xl border-2 border-purple-200 hover:border-purple-500 transition-all duration-300 tap-effect flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-500/0 group-hover:from-purple-500/10 group-hover:to-purple-500/5 transition-all duration-300"></div>
+                    <div class="relative z-10">
+                        <div class="bg-gradient-to-br from-purple-500 to-purple-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                            <i class="fas fa-cube text-4xl text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Tetris</h3>
+                        <p class="text-gray-600 mt-2">Classic falling block game.</p>
+                    </div>
+                </a>
+
+
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Sidebar Menu -->
+    <div id="sidebar-menu">
+        <div class="p-4 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">Menu</h2>
+        </div>
+        <a href="index.html" class="menu-item home-bg"><i class="fas fa-home"></i> Home</a>
+        <a href="shop.html" class="menu-item shop-bg"><i class="fas fa-shopping-cart"></i> Shop List</a>
+        <a href="wellness.html" class="menu-item wellness-bg"><i class="fas fa-heart"></i> Exercise</a>
+        <a href="contacts.html" class="menu-item contacts-bg"><i class="fas fa-phone"></i> Call</a>
+        <a href="meds.html" class="menu-item meds-bg"><i class="fas fa-pills"></i> Medicine</a>
+        <a href="schedule.html" class="menu-item schedule-bg"><i class="fas fa-list-alt"></i> Schedule</a>
+        <a href="tasks.html" class="menu-item tasks-bg"><i class="fas fa-check"></i> To-Do</a>
+        <a href="notes.html" class="menu-item notes-bg"><i class="fas fa-pen"></i> My Diary</a>
+        <a href="entertainment.html" class="menu-item entertainment-bg"><i class="fas fa-gamepad"></i> Entertainment</a>
+
+    </div>
+
+    <!-- Menu Overlay -->
+    <div id="menu-overlay"></div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            applyAccessSettings();
+        });
+    </script>
+    <div id="medicine-alarm-screen" class="call-screen">
+        <audio id="medicine-alarm-audio" src="alarm_clock.mp3" loop preload="auto"></audio>
+        <div class="flex flex-col items-center w-full">
+            <div class="call-avatar pulse-ring bg-red-500">
+                <i class="fas fa-bell text-white"></i>
+            </div>
+            <h2 id="medicine-alarm-name-display" class="text-3xl font-bold mb-2">Medicine Time</h2>
+            <p class="text-gray-400 text-lg">Time to take your medicine!</p>
+        </div>
+        
+        <div class="w-full flex flex-wrap justify-center gap-4 py-4">
+            <button onclick="snoozeMedicineAlarm()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-clock text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Snooze</span>
+            </button>
+            <button onclick="stopMedicineAlarmSound()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-red-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-times text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Stop</span>
+            </button>
+        </div>
+    </div>
+</body>
+</html>

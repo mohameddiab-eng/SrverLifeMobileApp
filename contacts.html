@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Contacts</title>
+    <script>
+      (function () {
+        try {
+          const isFramed = window.self !== window.top;
+          if (isFramed) return;
+          if (window.location.pathname.endsWith('/frame.html')) return;
+          if (window.innerWidth >= 700) {
+            const page = (window.location.pathname.split('/').pop() || 'index.html');
+            window.location.replace(`frame.html?page=${encodeURIComponent(page)}`);
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="h-screen overflow-hidden flex flex-col contacts-theme transition-all duration-500">
+<svg style="position:absolute;width:0;height:0;pointer-events:none" aria-hidden="true"><defs><filter id="deuteranopia-filter"><feColorMatrix type="matrix" values=" 0.625 0.375 0 0 0 0.7 0.3 0 0 0 0 0.3 0.7 0 0 0 0 0 1 0 "></feColorMatrix></filter><filter id="protanopia-filter"><feColorMatrix type="matrix" values=" 0.567 0.433 0 0 0 0.558 0.442 0 0 0 0 0.242 0.758 0 0 0 0 0 1 0 "></feColorMatrix></filter><filter id="tritanopia-filter"><feColorMatrix type="matrix" values=" 0.95 0.05 0 0 0 0 0.433 0.567 0 0 0 0.475 0.525 0 0 0 0 0 1 0 "></feColorMatrix></filter></defs></svg>
+    <!-- Modern Accessibility Panel -->
+    <div id="access-bar" class="modern-access-panel">
+        <div class="access-header">
+            <div class="flex items-center gap-3">
+                <div class="access-icon-wrapper">
+                    <i class="fas fa-universal-access"></i>
+                </div>
+                <div>
+                    <h3 class="access-title">Accessibility</h3>
+                    <p class="access-subtitle">Customize your experience</p>
+                </div>
+            </div>
+            <button onclick="toggleAccessBar()" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="access-content">
+            <!-- Text Size Section -->
+            <div class="access-section">
+                <div class="section-header">
+                    <i class="fas fa-text-height"></i>
+                    <span>Text Size</span>
+                </div>
+                <div class="size-selector">
+                    <button onclick="setAccess('size', 'normal')" class="size-btn" data-size="normal">
+                        <span class="size-label">A</span>
+                        <span class="size-desc">Normal</span>
+                    </button>
+                    <button onclick="setAccess('size', 'large')" class="size-btn active" data-size="large">
+                        <span class="size-label">A+</span>
+                        <span class="size-desc">Large</span>
+                    </button>
+                    <button onclick="setAccess('size', 'xl')" class="size-btn" data-size="xl">
+                        <span class="size-label">A++</span>
+                        <span class="size-desc">Extra Large</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Display Mode Section -->
+            <div class="access-section">
+                <div class="section-header">
+                    <i class="fas fa-palette"></i>
+                    <span>Display Mode</span>
+                </div>
+                <div class="mode-grid">
+                    <button onclick="setAccess('mode', 'light')" class="mode-card">
+                        <div class="mode-icon light-mode-icon">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        <span class="mode-name">Light</span>
+                    </button>
+                    <button onclick="setAccess('mode', 'dark')" class="mode-card">
+                        <div class="mode-icon dark-mode-icon">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <span class="mode-name">Dark</span>
+                    </button>
+                    <button onclick="setAccess('mode', 'contrast')" class="mode-card">
+                        <div class="mode-icon contrast-mode-icon">
+                            <i class="fas fa-adjust"></i>
+                        </div>
+                        <span class="mode-name">High Contrast</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Voice Assistant Section -->
+            <div class="access-section">
+                <div class="section-header">
+                    <i class="fas fa-volume-up"></i>
+                    <span>Voice Assistant</span>
+                </div>
+                <div class="voice-controls">
+                    <button onclick="readPage()" class="voice-btn primary">
+                        <i class="fas fa-play"></i>
+                        <span>Read Page</span>
+                    </button>
+                    <button onclick="stopReading()" class="voice-btn secondary">
+                        <i class="fas fa-stop"></i>
+                        <span>Stop</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <button onclick="setAccess('reset')" class="reset-btn">
+                <i class="fas fa-undo"></i>
+                <span>Reset All Settings</span>
+            </button>
+        </div>
+    </div>
+    <div id="fake-call-screen" class="call-screen">
+        <div class="flex flex-col items-center w-full">
+            <div class="call-avatar pulse-ring" id="call-avatar-default" style="display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-user"></i>
+            </div>
+            <h2 id="call-name" class="text-3xl font-bold mb-2">Contact Name</h2>
+            <p id="call-status" class="text-gray-400 text-lg">Calling...</p>
+        </div>
+        
+        <div class="w-full flex flex-wrap justify-center gap-4 py-4">
+            <button id="speaker-button" onclick="toggleSpeaker()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-volume-up text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Speaker</span>
+            </button>
+            <button class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-video text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Video</span>
+            </button>
+            <button id="mute-button" onclick="toggleMute()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-microphone-slash text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Mute</span>
+            </button>
+            <button id="volume-down-button" onclick="decreaseVolume()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-volume-down text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Vol -</span>
+            </button>
+            <button id="volume-up-button" onclick="increaseVolume()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-volume-up text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Vol +</span>
+            </button>
+        </div>
+ 
+        <button onclick="endFakeCall()" class="bg-red-500 w-20 h-20 rounded-full flex items-center justify-center shadow-lg tap-effect mt-8">
+            <i class="fas fa-phone-slash text-3xl text-white"></i>
+        </button>
+    </div>
+    <header class="bg-teal-600 text-white p-4 shadow-md z-30 sticky top-0 flex justify-between items-center h-16">
+        <div class="flex items-center gap-2">
+            <button id="menu-button" class="bg-teal-700 w-10 h-10 rounded-full flex items-center justify-center tap-effect border border-teal-500 shadow-sm" aria-label="Menu">
+                <i class="fas fa-bars text-lg"></i> <!-- Hamburger Menu Icon -->
+            </button>
+            <img src="SA.png" alt="Contacts Logo" class="w-8 h-8 rounded-full mr-2 app-logo">
+            <h1 class="text-2xl font-bold truncate">Call</h1>
+        </div>
+    </header>
+
+    <!-- Floating Accessibility Button -->
+    <button onclick="toggleAccessBar()" class="floating-access-btn" aria-label="Accessibility Settings" title="Accessibility">
+        <i class="fas fa-universal-access"></i>
+    </button>
+
+    <main class="flex-1 overflow-y-auto no-scrollbar p-4 relative">
+        <section id="contacts" class="page-section active">
+            <div class="bg-gradient-to-r from-green-100 via-green-50 to-green-100 border-l-4 border-green-500 p-6 mb-6 rounded-xl shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-20 h-20 bg-green-200/30 rounded-full -mr-10 -mt-10"></div>
+                <p class="text-green-900 font-bold text-xl relative z-10 flex items-center gap-2">
+                    <i class="fas fa-phone text-2xl"></i>
+                    Tap name to call, Trash to delete.
+                </p>
+            </div>
+            <div id="contact-list" class="grid grid-cols-1 gap-4"></div>
+            <button onclick="openModal('contact-modal')" class="fixed bottom-6 right-6 bg-green-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-2xl tap-effect hover:bg-green-700">
+                <i class="fas fa-user-plus"></i>
+            </button>
+        </section>
+    </main>
+
+    <div id="contact-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-4 text-green-800">Add Contact</h3>
+            <input type="text" id="contact-name" placeholder="Name (e.g., Son)" class="w-full p-4 mb-3 border-2 border-gray-300 rounded-xl text-lg text-gray-900">
+            <input type="tel" id="contact-phone" placeholder="Phone Number" class="w-full p-4 mb-6 border-2 border-gray-300 rounded-xl text-lg text-gray-900">
+            <div class="flex gap-3">
+                <button onclick="closeModal('contact-modal')" class="flex-1 py-4 bg-gray-200 text-gray-800 rounded-xl font-bold text-lg">Cancel</button>
+                <button onclick="saveItem('contacts')" class="flex-1 py-4 bg-green-600 text-white rounded-xl font-bold text-lg">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <audio id="ringtone-audio" src="apple_ringtone.mp3" loop preload="auto"></audio>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            applyAccessSettings();
+        });
+    </script>
+    <!-- Sidebar Menu -->
+    <div id="sidebar-menu">
+        <div class="p-4 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">Menu</h2>
+        </div>
+        <a href="index.html" class="menu-item home-bg"><i class="fas fa-home"></i> Home</a>
+        <a href="shop.html" class="menu-item shop-bg"><i class="fas fa-shopping-cart"></i> Shop List</a>
+        <a href="wellness.html" class="menu-item wellness-bg"><i class="fas fa-heart"></i> Exercise</a>
+        <a href="contacts.html" class="menu-item contacts-bg"><i class="fas fa-phone"></i> Call</a>
+        <a href="meds.html" class="menu-item meds-bg"><i class="fas fa-pills"></i> Medicine</a>
+        <a href="schedule.html" class="menu-item schedule-bg"><i class="fas fa-list-alt"></i> Schedule</a>
+        <a href="tasks.html" class="menu-item tasks-bg"><i class="fas fa-check"></i> To-Do</a>
+        <a href="notes.html" class="menu-item notes-bg"><i class="fas fa-pen"></i> My Diary</a>
+        <a href="entertainment.html" class="menu-item entertainment-bg"><i class="fas fa-gamepad"></i> Entertainment</a>
+        
+    </div>
+	<div id="medicine-alarm-screen" class="call-screen">
+        <audio id="medicine-alarm-audio" src="alarm_clock.mp3" loop preload="auto"></audio>
+        <div class="flex flex-col items-center w-full">
+            <div class="call-avatar pulse-ring bg-red-500">
+                <i class="fas fa-bell text-white"></i>
+            </div>
+            <h2 id="medicine-alarm-name-display" class="text-3xl font-bold mb-2">Medicine Time</h2>
+            <p class="text-gray-400 text-lg">Time to take your medicine!</p>
+        </div>
+        
+        <div class="w-full flex flex-wrap justify-center gap-4 py-4">
+            <button onclick="snoozeMedicineAlarm()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-clock text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Snooze</span>
+            </button>
+            <button onclick="stopMedicineAlarmSound()" class="flex flex-col items-center text-gray-400">
+                <div class="w-16 h-16 rounded-full bg-red-700 flex items-center justify-center mb-2">
+                    <i class="fas fa-times text-2xl text-white"></i>
+                </div>
+                <span class="text-white text-sm">Stop</span>
+            </button>
+        </div>
+    </div>
+    <!-- Menu Overlay -->
+    <div id="menu-overlay"></div>
+</body>
+</html>
