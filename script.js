@@ -154,6 +154,7 @@ function initDraggableAccessibilityButton() {
 
     let isDragging = false;
     let startX, startY, initialX, initialY;
+    const dragThreshold = 10; // Minimum distance to start dragging
 
     // Mouse events
     accessBtn.addEventListener('mousedown', startDrag);
@@ -166,8 +167,7 @@ function initDraggableAccessibilityButton() {
     document.addEventListener('touchend', endDrag);
 
     function startDrag(e) {
-        e.preventDefault();
-        isDragging = true;
+        isDragging = false; // Reset dragging flag
 
         if (e.type === 'touchstart') {
             startX = e.touches[0].clientX;
@@ -186,10 +186,6 @@ function initDraggableAccessibilityButton() {
     }
 
     function drag(e) {
-        if (!isDragging) return;
-
-        e.preventDefault();
-
         let currentX, currentY;
         if (e.type === 'touchmove') {
             currentX = e.touches[0].clientX;
@@ -201,38 +197,46 @@ function initDraggableAccessibilityButton() {
 
         const deltaX = currentX - startX;
         const deltaY = currentY - startY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-        const newX = initialX + deltaX;
-        const newY = initialY + deltaY;
+        if (distance > dragThreshold) {
+            if (!isDragging) {
+                isDragging = true;
+                e.preventDefault(); // Only prevent default when actually dragging
+            }
 
-        // Constrain to viewport
-        const maxX = window.innerWidth - accessBtn.offsetWidth;
-        const maxY = window.innerHeight - accessBtn.offsetHeight;
+            const newX = initialX + deltaX;
+            const newY = initialY + deltaY;
 
-        const constrainedX = Math.max(0, Math.min(newX, maxX));
-        const constrainedY = Math.max(0, Math.min(newY, maxY));
+            // Constrain to viewport
+            const maxX = window.innerWidth - accessBtn.offsetWidth;
+            const maxY = window.innerHeight - accessBtn.offsetHeight;
 
-        accessBtn.style.left = constrainedX + 'px';
-        accessBtn.style.top = constrainedY + 'px';
-        accessBtn.style.right = 'auto';
-        accessBtn.style.bottom = 'auto';
-        accessBtn.style.position = 'fixed';
+            const constrainedX = Math.max(0, Math.min(newX, maxX));
+            const constrainedY = Math.max(0, Math.min(newY, maxY));
+
+            accessBtn.style.left = constrainedX + 'px';
+            accessBtn.style.top = constrainedY + 'px';
+            accessBtn.style.right = 'auto';
+            accessBtn.style.bottom = 'auto';
+            accessBtn.style.position = 'fixed';
+        }
     }
 
     function endDrag(e) {
-        if (!isDragging) return;
+        if (isDragging) {
+            // Save position to localStorage only if we actually dragged
+            const rect = accessBtn.getBoundingClientRect();
+            const position = {
+                left: rect.left,
+                top: rect.top
+            };
+            localStorage.setItem('accessibilityButtonPosition', JSON.stringify(position));
+        }
 
         isDragging = false;
         accessBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         accessBtn.style.cursor = 'pointer';
-
-        // Save position to localStorage
-        const rect = accessBtn.getBoundingClientRect();
-        const position = {
-            left: rect.left,
-            top: rect.top
-        };
-        localStorage.setItem('accessibilityButtonPosition', JSON.stringify(position));
     }
 
     // Load saved position
@@ -1235,11 +1239,21 @@ window.triggerMedicineAlarm = function(id, name) {
         alarmScreen.classList.add('active');
         alarmScreen.style.display = 'flex';
         alarmScreen.style.zIndex = '9999';
+
+        // Add click handler to play audio on user interaction (for mobile autoplay restrictions)
+        const playAudioOnClick = () => {
+            const audioEl = getMedicineAlarmAudioEl();
+            if (audioEl && audioEl.paused) {
+                audioEl.play().catch(e => console.error("Error playing medicine alarm on click: ", e));
+            }
+            alarmScreen.removeEventListener('click', playAudioOnClick);
+        };
+        alarmScreen.addEventListener('click', playAudioOnClick);
     }
     if (alarmNameDisplay) {
         alarmNameDisplay.textContent = name || "Medicine";
     }
-    
+
     activeMedicineAlarmId = id; // Set the active alarm ID
 
     // Play alarm sound - works on all pages
@@ -1248,9 +1262,16 @@ window.triggerMedicineAlarm = function(id, name) {
         medicineAlarmAudio = audioEl;
         audioEl.currentTime = 0;
         audioEl.volume = 0.7;
-        audioEl.play().catch(e => console.error("Error playing medicine alarm: ", e));
+        // Try to play immediately, but also set up fallback for mobile
+        const playPromise = audioEl.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(e => {
+                console.warn("Autoplay blocked, audio will play on user interaction: ", e);
+                // Audio will be played when user clicks the alarm screen
+            });
+        }
     }
-    
+
     // Also show browser notification if supported
     if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Medicine Reminder', {
