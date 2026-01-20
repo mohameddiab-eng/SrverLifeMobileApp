@@ -752,7 +752,7 @@ function renderMeds() {
         let alarmDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), alarmHours, alarmMinutes, 0);
 
         // If the alarm time has passed for today, set it for tomorrow
-        if (alarmDate < now && !item.alarmTriggered) {
+        if (alarmDate < now) {
             alarmDate.setDate(alarmDate.getDate() + 1);
         }
 
@@ -1187,14 +1187,14 @@ function checkAllMedicineAlarms() {
         const timeUntilAlarm = alarmDate.getTime() - now.getTime();
         const secondsUntilAlarm = Math.floor(timeUntilAlarm / 1000);
 
-        // Trigger alarm when we're at exactly 0 seconds (within 1 second window)
+        // Trigger alarm when current time is at or just past the alarm time (within 1 second window)
         // This ensures it triggers on all pages
-        if (secondsUntilAlarm === 0 && timeUntilAlarm >= 0 && timeUntilAlarm < 1000 && !item.alarmTriggered) {
+        if (now >= alarmDate && now < new Date(alarmDate.getTime() + 1000) && !item.alarmTriggered) {
             triggerMedicineAlarm(item.id, item.name);
             item.alarmTriggered = true; // Mark as triggered to prevent multiple triggers
             saveToLocal(false); // Save state without re-rendering to avoid disrupting countdowns
-        } else if (secondsUntilAlarm > 0 && item.alarmTriggered) {
-            // Reset triggered flag if alarm is now in the future (e.g., after snooze or next day)
+        } else if (timeUntilAlarm > 0 && item.alarmTriggered) {
+            // Reset triggered flag if alarm is now in the future (e.g., after stop or next day)
             item.alarmTriggered = false;
             saveToLocal(false);
         }
