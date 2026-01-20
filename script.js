@@ -17,6 +17,7 @@ let activeMedicineAlarmId = null; // To track which medicine alarm is currently 
 let medicineAlarmAudio = null; // Still needed for the audio element itself
 let audioContext = null;
 let currentAlarmSource = null;
+let alarmAudioBuffer = null; // For Web Audio API
 
 function getMedicineAlarmAudioEl() {
     return document.getElementById('medicine-alarm-audio') || medicineAlarmAudio;
@@ -1272,13 +1273,71 @@ window.triggerMedicineAlarm = function(id, name) {
 
 // Function to play alarm sound (copying the call simulation approach)
 function playAlarmSound() {
-    const audioEl = getMedicineAlarmAudioEl();
-    if (audioEl) {
-        medicineAlarmAudio = audioEl;
-        audioEl.currentTime = 0; // Reset audio to start
-        audioEl.volume = 0.7; // Set volume
-        audioEl.loop = true; // Make sure it loops
-        audioEl.play().catch(e => console.error("Error playing alarm: ", e));
+    // Check if we're on iOS Safari (which has strict autoplay policies)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+    if (isIOS && isSafari) {
+        // Use Web Audio API for iOS Safari
+        playAlarmSoundWebAudio();
+    } else {
+        // Use regular HTML5 audio for other browsers
+        const audioEl = getMedicineAlarmAudioEl();
+        if (audioEl) {
+            medicineAlarmAudio = audioEl;
+            audioEl.currentTime = 0; // Reset audio to start
+            audioEl.volume = 0.7; // Set volume
+            audioEl.loop = true; // Make sure it loops
+            audioEl.play().catch(e => console.error("Error playing alarm: ", e));
+        }
+    }
+}
+
+// Web Audio API implementation for iOS Safari
+async function playAlarmSoundWebAudio() {
+    try {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+
+        if (!alarmAudioBuffer) {
+            // Load the audio file
+            const response = await fetch('alarm_clock.mp3');
+            const arrayBuffer = await response.arrayBuffer();
+            alarmAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        }
+
+        // Create audio source
+        currentAlarmSource = audioContext.createBufferSource();
+        currentAlarmSource.buffer = alarmAudioBuffer;
+        currentAlarmSource.loop = true;
+
+        // Create gain node for volume control
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = 0.7;
+
+        // Connect nodes
+        currentAlarmSource.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        // Start playing
+        currentAlarmSource.start(0);
+
+    } catch (error) {
+        console.error("Error playing alarm with Web Audio API:", error);
+        // Fallback to HTML5 audio
+        const audioEl = getMedicineAlarmAudioEl();
+        if (audioEl) {
+            medicineAlarmAudio = audioEl;
+            audioEl.currentTime = 0;
+            audioEl.volume = 0.7;
+            audioEl.loop = true;
+            audioEl.play().catch(e => console.error("Fallback audio error:", e));
+        }
     }
 }
 
@@ -1294,6 +1353,18 @@ window.testMedicineAlarm = function() {
 };
 
 window.stopMedicineAlarmSound = function() {
+    // Stop Web Audio API source if playing
+    if (currentAlarmSource) {
+        try {
+            currentAlarmSource.stop();
+            currentAlarmSource.disconnect();
+            currentAlarmSource = null;
+        } catch (e) {
+            console.warn("Error stopping Web Audio source:", e);
+        }
+    }
+
+    // Stop HTML5 audio element
     const audioEl = getMedicineAlarmAudioEl();
     if (audioEl) {
         medicineAlarmAudio = audioEl;
@@ -1308,6 +1379,7 @@ window.stopMedicineAlarmSound = function() {
             console.warn("Could not reset audio element:", e);
         }
     }
+
     const alarmScreen = document.getElementById('medicine-alarm-screen');
     if (alarmScreen) {
         alarmScreen.classList.remove('active');
