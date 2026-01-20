@@ -135,12 +135,12 @@
     </header>
 
     <!-- Floating Accessibility Button -->
-    <button onclick="toggleAccessBar()" class="floating-access-btn" aria-label="Accessibility Settings" title="Accessibility">
+    <button onclick="toggleAccessBar()" ontouchstart="toggleAccessBar()" class="floating-access-btn" aria-label="Accessibility Settings" title="Accessibility">
         <i class="fas fa-universal-access"></i>
     </button>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto no-scrollbar p-4 relative">
+    <main class="flex-1 overflow-y-auto no-scrollbar p-4 relative" style="touch-action: pan-y;">
         <section id="memories" class="page-section active">
             <!-- Camera View -->
             <div id="camera-container" class="hidden mb-6">

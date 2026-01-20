@@ -671,6 +671,7 @@ button:active::before {
     overflow-y: auto;
     padding: 20px;
     padding-bottom: 40px;
+    max-height: calc(100vh - 120px);
 }
 
 .access-section {
@@ -1852,6 +1853,30 @@ a.block.bg-white:hover {
 @keyframes logoFloat {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-10px); }
+}
+
+/* Modern Accessibility Panel Mobile Adjustments */
+@media (max-width: 640px) {
+    .modern-access-panel {
+        max-width: 320px;
+        height: 90vh;
+        top: 5vh;
+        border-radius: 20px;
+    }
+
+    .access-content {
+        max-height: calc(90vh - 100px);
+        padding: 16px;
+    }
+
+    .access-section {
+        margin-bottom: 24px;
+    }
+
+    .size-btn, .mode-card, .voice-btn {
+        padding: 10px;
+        font-size: 13px;
+    }
 }
 
 /* iPhone SE and Small Device Responsive Styles */
