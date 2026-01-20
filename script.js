@@ -154,7 +154,6 @@ function initDraggableAccessibilityButton() {
 
     let isDragging = false;
     let startX, startY, initialX, initialY;
-    const dragThreshold = 10; // Minimum distance to start dragging
 
     // Mouse events
     accessBtn.addEventListener('mousedown', startDrag);
@@ -167,7 +166,8 @@ function initDraggableAccessibilityButton() {
     document.addEventListener('touchend', endDrag);
 
     function startDrag(e) {
-        isDragging = false; // Reset dragging flag
+        e.preventDefault();
+        isDragging = true;
 
         if (e.type === 'touchstart') {
             startX = e.touches[0].clientX;
@@ -186,6 +186,10 @@ function initDraggableAccessibilityButton() {
     }
 
     function drag(e) {
+        if (!isDragging) return;
+
+        e.preventDefault();
+
         let currentX, currentY;
         if (e.type === 'touchmove') {
             currentX = e.touches[0].clientX;
@@ -197,46 +201,38 @@ function initDraggableAccessibilityButton() {
 
         const deltaX = currentX - startX;
         const deltaY = currentY - startY;
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-        if (distance > dragThreshold) {
-            if (!isDragging) {
-                isDragging = true;
-                e.preventDefault(); // Only prevent default when actually dragging
-            }
+        const newX = initialX + deltaX;
+        const newY = initialY + deltaY;
 
-            const newX = initialX + deltaX;
-            const newY = initialY + deltaY;
+        // Constrain to viewport
+        const maxX = window.innerWidth - accessBtn.offsetWidth;
+        const maxY = window.innerHeight - accessBtn.offsetHeight;
 
-            // Constrain to viewport
-            const maxX = window.innerWidth - accessBtn.offsetWidth;
-            const maxY = window.innerHeight - accessBtn.offsetHeight;
+        const constrainedX = Math.max(0, Math.min(newX, maxX));
+        const constrainedY = Math.max(0, Math.min(newY, maxY));
 
-            const constrainedX = Math.max(0, Math.min(newX, maxX));
-            const constrainedY = Math.max(0, Math.min(newY, maxY));
-
-            accessBtn.style.left = constrainedX + 'px';
-            accessBtn.style.top = constrainedY + 'px';
-            accessBtn.style.right = 'auto';
-            accessBtn.style.bottom = 'auto';
-            accessBtn.style.position = 'fixed';
-        }
+        accessBtn.style.left = constrainedX + 'px';
+        accessBtn.style.top = constrainedY + 'px';
+        accessBtn.style.right = 'auto';
+        accessBtn.style.bottom = 'auto';
+        accessBtn.style.position = 'fixed';
     }
 
     function endDrag(e) {
-        if (isDragging) {
-            // Save position to localStorage only if we actually dragged
-            const rect = accessBtn.getBoundingClientRect();
-            const position = {
-                left: rect.left,
-                top: rect.top
-            };
-            localStorage.setItem('accessibilityButtonPosition', JSON.stringify(position));
-        }
+        if (!isDragging) return;
 
         isDragging = false;
         accessBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         accessBtn.style.cursor = 'pointer';
+
+        // Save position to localStorage
+        const rect = accessBtn.getBoundingClientRect();
+        const position = {
+            left: rect.left,
+            top: rect.top
+        };
+        localStorage.setItem('accessibilityButtonPosition', JSON.stringify(position));
     }
 
     // Load saved position
